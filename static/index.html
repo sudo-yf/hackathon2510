@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手势控制系统 V2.0</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #007AFF;
+            --secondary-color: #5856D6;
+            --success-color: #34C759;
+            --danger-color: #FF3B30;
+            --bg-dark: #000000;
+            --text-white: #FFFFFF;
+            --glass-bg: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.3);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-white);
+            overflow: hidden;
+        }
+
+        /* 亚克力玻璃效果 */
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 主容器 */
+        #app {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 视频画面 */
+        #videoCanvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* 顶部导航栏 */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* 控制面板 */
+        .control-panel {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 15px;
+            padding: 20px 30px;
+            border-radius: 20px;
+        }
+
+        /* 按钮样式 */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        }
+
+        .btn-success {
+            background: var(--success-color);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* 状态指示器 */
+        .status-panel {
+            position: fixed;
+            top: 100px;
+            right: 30px;
+            z-index: 100;
+            padding: 20px;
+            border-radius: 16px;
+            min-width: 200px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .status-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.active {
+            background: var(--success-color);
+        }
+
+        .status-dot.inactive {
+            background: #666;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* 手势提示卡片 */
+        .gesture-hint {
+            position: fixed;
+            top: 100px;
+            left: 30px;
+            z-index: 100;
+            padding: 20px;
+            border-radius: 16px;
+            max-width: 300px;
+        }
+
+        .gesture-hint h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: var(--text-white);
+        }
+
+        .gesture-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .gesture-icon {
+            font-size: 24px;
+        }
+
+        /* 设置面板 */
+        .settings-panel {
+            position: fixed;
+            top: 100px;
+            left: 30px;
+            z-index: 100;
+            padding: 20px;
+            border-radius: 16px;
+            min-width: 280px;
+            display: none;
+        }
+
+        .settings-panel.active {
+            display: block;
+        }
+
+        .setting-item {
+            margin-bottom: 15px;
+        }
+
+        .setting-item label {
+            display: block;
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .setting-item input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+        }
+
+        .setting-item input[type="range"]::-webkit-slider-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+        }
+
+        /* 加载动画 */
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 200;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .control-panel {
+                flex-direction: column;
+                bottom: 20px;
+            }
+
+            .status-panel,
+            .gesture-hint,
+            .settings-panel {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 视频画面 -->
+        <img id="videoCanvas" alt="Camera Feed">
+
+        <!-- 加载动画 -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>正在初始化...</p>
+        </div>
+
+        <!-- 顶部导航 -->
+        <div class="header glass">
+            <div class="logo">
+                <div class="logo-icon">👋</div>
+                <span>手势控制系统 V2.0</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="window.location.href='/gesture_config.html'">🎮 手势配置</button>
+                <button class="btn btn-secondary" onclick="toggleSettings()">⚙️ 设置</button>
+            </div>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="control-panel glass">
+            <button id="btnCamera" class="btn btn-primary" onclick="toggleCamera()">
+                📷 启动摄像头
+            </button>
+            <button id="btnMouse" class="btn btn-secondary" onclick="toggleMouse()" disabled>
+                🖱️ 启用鼠标
+            </button>
+            <button class="btn btn-secondary" onclick="toggleFlip()">
+                🔄 翻转画面
+            </button>
+        </div>
+
+        <!-- 状态面板 -->
+        <div class="status-panel glass">
+            <div class="status-item">
+                <div id="statusCamera" class="status-dot inactive"></div>
+                <span>摄像头</span>
+            </div>
+            <div class="status-item">
+                <div id="statusMouse" class="status-dot inactive"></div>
+                <span>鼠标控制</span>
+            </div>
+            <div class="status-item">
+                <div id="statusFPS" class="status-dot inactive"></div>
+                <span id="fpsText">FPS: 0</span>
+            </div>
+        </div>
+
+        <!-- 手势提示 -->
+        <div id="gestureHint" class="gesture-hint glass">
+            <h3>✋ 手势说明</h3>
+            <div class="gesture-item">
+                <span class="gesture-icon">👆</span>
+                <span>食指移动 - 控制鼠标</span>
+            </div>
+            <div class="gesture-item">
+                <span class="gesture-icon">👌</span>
+                <span>拇指碰中指尖 - 左键</span>
+            </div>
+            <div class="gesture-item">
+                <span class="gesture-icon">🤏</span>
+                <span>拇指碰中指中 - 右键</span>
+            </div>
+        </div>
+
+        <!-- 设置面板 -->
+        <div id="settingsPanel" class="settings-panel glass">
+            <h3 style="margin-bottom: 20px;">⚙️ 高级设置</h3>
+            
+            <div class="setting-item">
+                <label>平滑度: <span id="smoothingValue">0.3</span></label>
+                <input type="range" id="smoothing" min="0.1" max="0.9" step="0.1" value="0.3">
+            </div>
+            
+            <div class="setting-item">
+                <label>中心增稳: <span id="powerValue">2.0</span></label>
+                <input type="range" id="powerFactor" min="1.0" max="3.0" step="0.1" value="2.0">
+            </div>
+            
+            <div class="setting-item">
+                <label>边缘加速: <span id="edgeValue">1.5</span></label>
+                <input type="range" id="edgeBoost" min="1.0" max="3.0" step="0.1" value="1.5">
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
