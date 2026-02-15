@@ -65,6 +65,12 @@ make test
 make check
 ```
 
+### 4. 运行前自检
+
+```bash
+make doctor
+```
+
 ## 容器部署
 
 构建镜像：
@@ -136,6 +142,12 @@ hackathon2510/
 - [OpenCV](https://github.com/opencv/opencv)
 - [Flask](https://github.com/pallets/flask)
 - [Flask-SocketIO](https://github.com/miguelgrinberg/Flask-SocketIO)
+
+## 发布打包
+
+```bash
+make release-bundle
+```
 
 ## 产品规划与社区
 
