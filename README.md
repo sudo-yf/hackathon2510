@@ -137,3 +137,8 @@ hackathon2510/
 - [Flask](https://github.com/pallets/flask)
 - [Flask-SocketIO](https://github.com/miguelgrinberg/Flask-SocketIO)
 
+## 产品规划与社区
+
+- [产品战略](docs/PRODUCT_STRATEGY.md)
+- [Roadmap](docs/ROADMAP.md)
+- [贡献指南](CONTRIBUTING.md)
