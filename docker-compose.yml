@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  waytoagi-gesture:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: waytoagi-gesture:latest
+    container_name: waytoagi-gesture
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    environment:
+      - DISABLE_MOUSE=${DISABLE_MOUSE:-1}
+    volumes:
+      - ./:/app
+    devices:
+      - /dev/video0:/dev/video0
+    command: ["uv", "run", "python", "app.py"]

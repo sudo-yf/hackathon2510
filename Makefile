@@ -1,4 +1,4 @@
-.PHONY: sync lint format test check run docker-build
+.PHONY: sync lint format test check run docker-build docker-run
 
 sync:
 	uv sync
@@ -19,3 +19,6 @@ run:
 
 docker-build:
 	docker build -t waytoagi-gesture:latest .
+
+docker-run:
+	docker compose up --build

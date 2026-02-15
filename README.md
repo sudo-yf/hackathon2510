@@ -2,73 +2,62 @@
 
 # WayToAGI Gesture Control
 
-Real-time hand-tracking mouse control system for desktop interaction.
+面向桌面交互场景的实时手势控制系统
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
-[![Flask](https://img.shields.io/badge/backend-Flask%20%2B%20Socket.IO-black.svg)](https://flask.palletsprojects.com/)
-[![MediaPipe](https://img.shields.io/badge/vision-MediaPipe-00A67E.svg)](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker)
+[![Backend](https://img.shields.io/badge/backend-Flask%20%2B%20Socket.IO-black.svg)](https://flask.palletsprojects.com/)
+[![Vision](https://img.shields.io/badge/vision-MediaPipe-00A67E.svg)](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker)
 [![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088FF.svg)](https://github.com/sudo-yf/hackathon2510/actions)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 </div>
 
-## Overview
+## 项目简介
 
-WayToAGI Gesture Control 是一个面向实时人机交互的手势控制系统：通过摄像头捕获手部关键点，完成光标映射与点击手势识别，并通过 Web UI 提供低延迟可视化与参数调优能力。
+WayToAGI Gesture Control 将摄像头手部追踪、手势识别、光标映射与 Web 可视化控制台整合为一个完整系统，适用于交互演示、无接触控制、课程实验与 Hackathon 原型验证。
 
-## Table of Contents
+## 核心亮点
 
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [System Architecture](#system-architecture)
-- [Quick Start](#quick-start)
-- [Docker Deployment](#docker-deployment)
-- [Runtime Configuration](#runtime-configuration)
-- [HTTP API](#http-api)
-- [Project Structure](#project-structure)
-- [Design References](#design-references)
+- 基于 MediaPipe Hands 的 21 点手部关键点跟踪
+- 非线性光标映射（中心稳态、边缘加速）
+- 手势点击触发（Left Click / Right Click）
+- Socket.IO 实时帧推送与状态同步
+- SQLite 参数持久化（平滑、灵敏度、边缘增益）
+- 支持 `DISABLE_MOUSE` 安全模式（仅演示，不注入系统鼠标）
 
-## Key Features
-
-- 21-point hand landmark tracking (MediaPipe Hands)
-- 非线性光标映射（中心稳态 + 边缘加速）
-- 手势点击触发（左键 / 右键）
-- Socket.IO 实时视频帧与状态推送
-- SQLite 参数持久化（平滑系数、灵敏度、边缘加速）
-- 可在无系统鼠标注入模式下运行（`DISABLE_MOUSE=1`）
-
-## System Architecture
+## 系统架构
 
 ```mermaid
 graph LR
-    Cam[Camera Input] --> Vision[MediaPipe Hands]
-    Vision --> Gesture[Gesture Engine]
-    Gesture --> Cursor[Cursor Mapping]
-    Gesture --> Click[Gesture Click Detection]
-    Cursor --> Mouse[Mouse Backend]
-    Gesture --> WS[Socket.IO Stream]
-    WS --> UI[Web Dashboard]
-    UI --> API[Flask API]
+    Camera[Camera] --> Vision[MediaPipe Hands]
+    Vision --> Engine[Gesture Engine]
+    Engine --> Mapping[Cursor Mapping]
+    Engine --> Click[Click Detection]
+    Mapping --> Mouse[Mouse Backend]
+    Engine --> Stream[Socket.IO Stream]
+    Stream --> Dashboard[Web Dashboard]
+    Dashboard --> API[Flask API]
     API --> Store[(SQLite Settings)]
 ```
 
-## Quick Start
+## 快速开始
 
-### 1. Install Dependencies (uv)
+### 1. 安装依赖（uv）
 
 ```bash
 uv sync
+cp .env.example .env
 ```
 
-### 2. Run Service
+### 2. 启动服务
 
 ```bash
 uv run python app.py
 ```
 
-Open: [http://localhost:5000](http://localhost:5000)
+浏览器访问：[http://localhost:5000](http://localhost:5000)
 
-### 3. Quality Gates
+### 3. 质量检查
 
 ```bash
 make lint
@@ -76,47 +65,53 @@ make test
 make check
 ```
 
-## Docker Deployment
+## 容器部署
+
+构建镜像：
 
 ```bash
-docker build -t waytoagi-gesture:latest .
+make docker-build
 ```
+
+运行容器：
 
 ```bash
-docker run --rm -it \
-  -p 5000:5000 \
-  --device=/dev/video0:/dev/video0 \
-  -e DISABLE_MOUSE=1 \
-  waytoagi-gesture:latest
+make docker-run
 ```
 
-## Runtime Configuration
+或使用 Compose：
 
-| Env | Default | Description |
+```bash
+docker compose up --build
+```
+
+## 运行配置
+
+| 环境变量 | 默认值 | 说明 |
 |---|---|---|
 | `HOST` | `0.0.0.0` | 服务监听地址 |
 | `PORT` | `5000` | 服务端口 |
 | `CAMERA_INDEX` | `0` | 摄像头索引 |
-| `FRAME_WIDTH` | `1280` | 采集宽度 |
-| `FRAME_HEIGHT` | `720` | 采集高度 |
-| `FRAME_FPS` | `30` | 采样帧率 |
-| `CORS_ORIGIN` | `*` | 前端跨域来源 |
+| `FRAME_WIDTH` | `1280` | 视频宽度 |
+| `FRAME_HEIGHT` | `720` | 视频高度 |
+| `FRAME_FPS` | `30` | 视频帧率 |
+| `CORS_ORIGIN` | `*` | CORS 允许来源 |
 | `SETTINGS_DB_PATH` | `data/waytoagi.db` | SQLite 配置存储路径 |
-| `DISABLE_MOUSE` | `0` | 禁用真实鼠标注入（1 为禁用） |
+| `DISABLE_MOUSE` | `0` | 1 表示禁用系统鼠标注入 |
 
 ## HTTP API
 
-| Method | Path | Description |
+| Method | Path | 说明 |
 |---|---|---|
-| `GET` | `/healthz` | 服务与摄像头状态 |
-| `GET` | `/api/settings` | 读取当前控制参数 |
-| `POST` | `/api/settings` | 更新控制参数 |
-| `POST` | `/api/camera/start` | 启动摄像头处理线程 |
-| `POST` | `/api/camera/stop` | 停止摄像头处理线程 |
+| `GET` | `/healthz` | 健康状态与运行状态 |
+| `GET` | `/api/settings` | 读取参数 |
+| `POST` | `/api/settings` | 更新参数 |
+| `POST` | `/api/camera/start` | 启动摄像头线程 |
+| `POST` | `/api/camera/stop` | 停止摄像头线程 |
 | `POST` | `/api/mouse/toggle` | 切换鼠标控制开关 |
-| `POST` | `/api/settings/flip` | 切换镜像翻转 |
+| `POST` | `/api/settings/flip` | 切换画面镜像 |
 
-## Project Structure
+## 目录结构
 
 ```text
 hackathon2510/
@@ -129,12 +124,13 @@ hackathon2510/
 │   └── static/
 ├── tests/
 ├── Dockerfile
+├── docker-compose.yml
 ├── Makefile
 ├── pyproject.toml
 └── LICENSE
 ```
 
-## Design References
+## 参考项目
 
 - [MediaPipe](https://github.com/google-ai-edge/mediapipe)
 - [OpenCV](https://github.com/opencv/opencv)
