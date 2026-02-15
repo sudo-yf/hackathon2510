@@ -1,6 +1,6 @@
 [project]
 name = "waytoagi-gesture-control"
-version = "2.1.0"
+version = "2.2.0"
 description = "WayToAGI Hackathon project: real-time hand gesture control with Flask + MediaPipe"
 readme = "README.md"
 requires-python = ">=3.10"
