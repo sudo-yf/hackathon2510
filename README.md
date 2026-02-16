@@ -148,9 +148,3 @@ hackathon2510/
 ```bash
 make release-bundle
 ```
-
-## 产品规划与社区
-
-- [产品战略](docs/PRODUCT_STRATEGY.md)
-- [Roadmap](docs/ROADMAP.md)
-- [贡献指南](CONTRIBUTING.md)
